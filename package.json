@@ -1,0 +1,14 @@
+{
+  "name": "request-q",
+  "description": "Simple wrapper for request package which resolves in Q promises. ",
+  "version": "0.0.1",
+  "engines": [
+    "node >= 0.8.16"
+  ],
+  "main": "request-q.js",
+  "scripts": {},
+  "dependencies": {
+    "q": "x",
+    "request": "x"
+  }
+}
