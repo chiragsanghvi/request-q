@@ -3,6 +3,8 @@
 
 var Q = require ("q");
 var request = require("request");
+var qs = require('querystring');
+var url = require('url');
 
 /**
  * A list of methods to create denodeified versions
@@ -17,6 +19,16 @@ var REQUEST_METHODS = [
     "post",
     "put"
 ];
+
+var formatUrl = function(uri, params) {
+    uri = url.parse(uri);
+    var queryString = qs.parse(uri.query);
+    for (var k in params) {
+        queryString[k] = params[k];
+    }
+    uri.search = qs.stringify(queryString);
+    return url.format(uri);
+};
 
 /**
  * Q-wrapped request constructor
@@ -42,7 +54,7 @@ REQUEST_METHODS.forEach(function(method) {
         fArgs.push(function (err, response, body) {
             if (null != err) {
                 result.reject({ data: err });
-            } else if(response.statusCode < 200 || response.statusCode >= 400) {
+            } else if (response.statusCode < 200 || response.statusCode >= 400) {
                 result.reject({ data: body, statusCode: response.statusCode });
             } else {
                 result.resolve({ data: body });
@@ -58,7 +70,16 @@ REQUEST_METHODS.forEach(function(method) {
         var args = Array.prototype.slice.call(arguments, 0);
         if ((method == 'post' || method == 'put') && (typeof args[1] == 'object')) {
             args[1] = { json: args[1] };
-        } 
+
+            if (args[2] && typeof args[2] == 'object' && args[2].params) {
+                args[0] = formatUrl(args[0], args[2].params);
+                args.splice(2, 1);
+            }
+        } else if ((method == 'get' || method == 'delete') && (typeof args[1] == 'object') && args[1].params) {
+            args[0] = formatUrl(args[0], args[1].params);
+            args.splice(1, 1);
+        }
+
         return request[method].apply(request, args);
     }
 });
