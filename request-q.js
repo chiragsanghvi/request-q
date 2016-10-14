@@ -52,12 +52,17 @@ REQUEST_METHODS.forEach(function(method) {
         var result = Q.defer();
         var fArgs = Array.prototype.slice.call(arguments, 0);
         fArgs.push(function (err, response, body) {
+
+            var headers = function() {
+                return response.headers;
+            };
+
             if (null != err) {
-                result.reject({ data: err });
+                result.reject({ data: err, headers: headers });
             } else if (response.statusCode < 200 || response.statusCode >= 400) {
-                result.reject({ data: body, statusCode: response.statusCode });
+                result.reject({ data: body, statusCode: response.statusCode, headers: headers });
             } else {
-                result.resolve({ data: body });
+                result.resolve({ data: body, headers: headers });
             }
         });
         if (method == 'delete') method = 'del';
@@ -69,15 +74,22 @@ REQUEST_METHODS.forEach(function(method) {
         var request = new QRequest(this.defaults);
         var args = Array.prototype.slice.call(arguments, 0);
         if ((method == 'post' || method == 'put') && (typeof args[1] == 'object')) {
-            args[1] = { json: args[1] };
+            var obj = {};
 
-            if (args[2] && typeof args[2] == 'object' && args[2].params) {
-                args[0] = formatUrl(args[0], args[2].params);
+            if (args[2] && typeof args[2] == 'object') {
+                if (args[2].params) args[0] = formatUrl(args[0], args[2].params);
+                obj = args[2];
                 args.splice(2, 1);
             }
-        } else if ((method == 'get' || method == 'delete') && (typeof args[1] == 'object') && args[1].params) {
-            args[0] = formatUrl(args[0], args[1].params);
+            obj.url = args[0]
+            obj.json = args[1];
+            args[0] = obj;
             args.splice(1, 1);
+        } else if ((method == 'get' || method == 'delete') && (typeof args[1] == 'object')) {
+            var obj = args[1];
+            obj.url = formatUrl(args[0], args[1].params);
+            args.splice(1,1);
+            args[0] = obj;
         }
 
         return request[method].apply(request, args);
