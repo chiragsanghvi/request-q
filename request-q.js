@@ -51,22 +51,37 @@ REQUEST_METHODS.forEach(function(method) {
     QRequest.prototype[method] = function () {
         var result = Q.defer();
         var fArgs = Array.prototype.slice.call(arguments, 0);
+
+        var self = this;
+        var max_retries = 10, delay = 100, count = 0;
+        
+        function asyncfn() {
+            self.raw[method].apply(self.raw, fArgs);
+        };
+
         fArgs.push(function (err, response, body) {
 
             var headers = function() {
                 return response.headers;
             };
 
-            if (null != err) {
-                result.reject({ data: err, headers: headers });
-            } else if (response.statusCode < 200 || response.statusCode >= 400) {
-                result.reject({ data: body, statusCode: response.statusCode, headers: headers });
+            response.status = response.status || response.statusCode;
+            if (self.raw._retriable_error_codes && (self.raw._retriable_error_codes.indexOf(response.status) != -1) && count < max_retries) {
+                count += 1;
+                setTimeout(asyncfn, delay);
+                delay *= 2;
             } else {
-                result.resolve({ data: body, headers: headers });
+                if (null != err) {
+                    result.reject({ data: err, headers: headers });
+                } else if (response.statusCode < 200 || response.statusCode >= 400) {
+                    result.reject({ data: body, statusCode: response.statusCode, headers: headers });
+                } else {
+                    result.resolve({ data: body, headers: headers });
+                }
             }
         });
         if (method == 'delete') method = 'del';
-        this.raw[method].apply(this.raw, fArgs);
+        asyncfn();
         return result.promise;
     };
 
