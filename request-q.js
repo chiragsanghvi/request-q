@@ -61,6 +61,8 @@ REQUEST_METHODS.forEach(function(method) {
 
         fArgs.push(function (err, response, body) {
 
+            response = response || {};
+
             var headers = function() {
                 return response.headers;
             };
