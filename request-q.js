@@ -68,7 +68,7 @@ REQUEST_METHODS.forEach(function(method) {
             };
 
             response.status = response.status || response.statusCode;
-            if (self.raw._retriable_error_codes && (self.raw._retriable_error_codes.indexOf(response.status) != -1) && count < max_retries) {
+            if (QRequest.defaults._retriable_error_codes && (QRequest.defaults._retriable_error_codes.indexOf(response.status) != -1) && count < max_retries) {
                 count += 1;
                 setTimeout(asyncfn, delay);
                 delay *= 2;
