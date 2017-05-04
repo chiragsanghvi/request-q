@@ -56,14 +56,15 @@ REQUEST_METHODS.forEach(function(method) {
         var max_retries = 10, delay = 100, count = 0;
         
         function asyncfn() {
-            self.raw[method].apply(self.raw, fArgs);
+            self.raw[method].apply(self.raw, fArgs)
         };
 
         fArgs.push(function (err, response, body) {
 
             response = response || {};
 
-            var headers = function() {
+            var headers = function(headerName) {
+                if (headerName) return response.headers[headerName];
                 return response.headers;
             };
 
@@ -98,15 +99,33 @@ REQUEST_METHODS.forEach(function(method) {
                 obj = args[2];
                 args.splice(2, 1);
             }
-            obj.url = args[0]
-            obj.json = args[1];
+            obj.url = args[0];
+
+            var objectConstructor = {}.constructor;
+            var arrayConstructor = [].constructor;
+
+            if ((typeof args[1] == 'object') && ((args[1].constructor === objectConstructor) || (args[1].constructor === arrayConstructor))) {
+                obj.json = args[1];
+            }  else  {
+                obj.body = args[1];
+                obj.json = false;
+            }
+
             args[0] = obj;
             args.splice(1, 1);
-        } else if ((method == 'get' || method == 'delete') && (typeof args[1] == 'object')) {
+        } else if ((method == 'get' || method == 'delete' || method == 'head') && (typeof args[1] == 'object')) {
             var obj = args[1];
             obj.url = formatUrl(args[0], args[1].params);
             args.splice(1,1);
             args[0] = obj;
+        } else if (method =="post" || method =="put") {
+            var obj = {};
+            if (args[2] && typeof args[2] == 'object') {
+                if (args[2].params) args[0] = formatUrl(args[0], args[2].params);
+                obj = args[2];
+                args.splice(2, 1);
+            }
+            obj.url = args[0];
         }
 
         return request[method].apply(request, args);
